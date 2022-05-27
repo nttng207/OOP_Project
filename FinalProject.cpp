@@ -32,20 +32,6 @@ public:
 	void setY(float b) {
 		y = b;
 	}
-};
-
-
-// Line ax + by = c
-class Line {
-protected:
-	Point a, b;
-public:
-	float A, B, C;
-	Line(Point aa, Point bb):a(aa), b(bb) {
-		A = a.getY() - b.getY();
-		B = b.getX() - a.getX();
-		C = a.getY() * b.getX() - a.getX() * b.getY();
-	}
 	friend Point& operator+(Point, Point) {};
 	friend Point& operator-(Point, Point) {};
 	friend float& operator*(Point, Point) {};
@@ -66,6 +52,19 @@ float& operator*(Point a, Point b) {
 	float c = a.getX() * b.getX() - a.getY() * b.getY();
 	return c;
 }
+
+// Line ax + by = c
+class Line {
+protected:
+	Point a, b;
+public:
+	float A, B, C;
+	Line(Point aa, Point bb):a(aa), b(bb) {
+		A = a.getY() - b.getY();
+		B = b.getX() - a.getX();
+		C = a.getY() * b.getX() - a.getX() * b.getY();
+	}
+};
 // Elipse
 class Elipse : public Figure
 {
@@ -141,7 +140,7 @@ void Triangle::Input(istream& inDevice)
 {
 	float x, y;
 	cout << "Nhap toa do: " << endl;
-	cout << "(x1, ý): ";
+	cout << "(x1, Ã½): ";
 	cin >> x >> y;
 	p1.SetPoint(x, y);
 	cout << "(x2, y2): ";
