@@ -8,7 +8,7 @@ class Figure
 public:
 	virtual void Input(istream&) = 0;
 	virtual float Area() = 0;
-	virtual bool Check_through() = 0;
+	virtual bool Check_through(Line line) = 0;
 };
 
 class Point
@@ -16,7 +16,7 @@ class Point
 private:
 	float x, y;
 public:
-	Point(float a = 0, float b = 0): x(a),y(b) {};
+	Point(float a = 0, float b = 0): x(a), y(b) {};
 	void Input(istream& inDevice) {
 		inDevice >> x;	inDevice >> y;
 	}
@@ -64,7 +64,63 @@ public:
 		B = b.getX() - a.getX();
 		C = a.getY() * b.getX() - a.getX() * b.getY();
 	}
+	Point getPointS() {
+		return a;
+	}
+	Point getPointE() {
+		return b;
+	}
+	float distance() {
+		return sqrt(pow(b.getX() - a.getX(), 2) + pow(b.getY() - a.getY(), 2));
+	}
 };
+
+// Circle
+class Circle:public Figure 
+{ 
+protected:
+	float R;
+public:
+	Point I;
+	Circle(float Rx);
+	virtual void Input(istream& inDevice);
+	virtual float Area();
+	virtual bool Check_through(Line line);
+};
+
+Circle::Circle(float Rx = 0) {
+	R = Rx;
+}
+
+void Circle::Input(istream& inDevice) {
+	cout << "Nhap ban kinh hinh tron: " << endl;
+	inDevice >> R;
+	cout << "Nhap toa do hinh tron: " << endl;
+	I.Input(cin);
+}
+
+float Circle::Area() {
+	return R * R * 3.14;
+}
+
+bool Circle::Check_through(Line line) {
+	float LAB = line.distance();
+	// compute the direction vector D from A to B
+	float Dx = (line.getPointE().getX() - line.getPointS().getX()) / LAB;
+	float Dy = (line.getPointE().getY() - line.getPointS().getY()) / LAB;
+	// the equation of the line AB is x = Dx*t + Ax, y = Dy*t + Ay with 0 <= t <= LAB.
+	// compute the distance between the points A and E, where
+	// E is the point of AB closest the circle center (Cx, Cy)
+	float t = Dx * (I.getX() - line.getPointS().getX()) + Dy*(I.getY() - line.getPointS().getY());
+	// compute the coordinates of the point E
+	float Ex = t * Dx + line.getPointS().getX();
+	float Ey = t * Dy + line.getPointS().getY();
+	// compute the euclidean distance between E and C
+	Line temp({ Ex, Ey }, I);
+	float LEC = temp.distance();
+	if (LEC < R) return true;
+	return false;
+}
 // Elipse
 class Elipse : public Figure
 {
@@ -75,7 +131,7 @@ public:
 	Elipse(float a, float b);
 	virtual void Input(istream& inDevice);
 	virtual float Area();
-	virtual bool Horizontal_through();
+	virtual bool Check_through();
 };
 
 Elipse::Elipse(float a = 0, float b = 0)
@@ -96,7 +152,7 @@ float Elipse::Area()
 	return 3.14 * Ra * Rb;
 }
 
-bool Elipse::Horizontal_through()
+bool Elipse::Check_through()
 {
 	return (abs(this->Center.getY()) - this->Rb <= 0);
 }
@@ -107,13 +163,13 @@ class Triangle : public Figure
 private:
 	float x1, x2, x3;
 public:
-	Triangle() {}
+	Triangle() {};
 	Point p1, p2, p3;
 	Triangle(Point p1, Point p2, Point p3);
 	void setTriangle(Point p1, Point p2, Point p3);
 	virtual float Area();
 	virtual void Input(istream& inDevice);
-	virtual bool Horizontal_through();
+	virtual bool Check_through();
 };
 
 Triangle::Triangle(Point p1, Point p2, Point p3)
@@ -140,19 +196,23 @@ void Triangle::Input(istream& inDevice)
 {
 	float x, y;
 	cout << "Nhap toa do: " << endl;
-	cout << "(x1, ý): ";
+	cout << "(x1, y1): ";
 	cin >> x >> y;
-	p1.SetPoint(x, y);
+	p1.setX(x);
+	p1.setY(y);
 	cout << "(x2, y2): ";
 	cin >> x >> y;
-	p2.SetPoint(x, y);
+	p2.setX(x);
+	p2.setY(y);
 	cout << "(x3, y3): ";
 	cin >> x >> y;
-	p3.SetPoint(x, y);
-	Triangle(p1, p2, p3);
+	p3.setX(x);
+	p3.setY(y);
+	Triangle t;
+	t.setTriangle(p1, p2, p3);
 }
 
-bool Triangle::Horizontal_through()
+bool Triangle::Check_through()
 {
 	return (p1.getY() <= 0 || p2.getY() <= 0 || p3.getY() <= 0);
 }
@@ -170,7 +230,7 @@ public:
 	void setRectangle(Point rUpper, Point lLower);
 	virtual float Area();
 	virtual void Input(istream& inDevice);
-	virtual bool Horizontal_through();
+	virtual bool Check_through();
 };
 
 void Rectangle::setRectangle(Point rUpper, Point lLower) {
@@ -201,7 +261,7 @@ void Rectangle::Input(istream& inDevice)
 	LLower.Input(cin);
 }
 
-bool Rectangle::Horizontal_through()
+bool Rectangle::Check_through()
 {
 	return LLower.getY() <= 0;
 }
@@ -209,11 +269,11 @@ bool Rectangle::Horizontal_through()
 float CountHThrough(vector<Elipse> E, vector<Rectangle> R, vector<Triangle> T) {
 	int count = 0;
 	for (auto& n : E)
-		count += n.Horizontal_through();
+		count += n.Check_through();
 	for (auto& n : R)
-		count += n.Horizontal_through();
+		count += n.Check_through();
 	for (auto& n : E)
-		count += n.Horizontal_through();
+		count += n.Check_through();
 	return count;
 }
 
