@@ -3,6 +3,52 @@
 #include <vector>
 #include <cmath>
 using namespace std;
+bool onSegment(Point p, Point q, Point r)
+{
+	if (q.getX() <= max(p.getX(), r.getX()) && q.getX() >= min(p.getX(), r.getX()) &&
+		q.getY() <= max(p.getY(), r.getY()) && q.getY() >= min(p.getY(), r.getY()))
+		return true;
+
+	return false;
+}
+int orientation(Point p, Point q, Point r)
+{
+	int val = (q.getY() - p.getY()) * (r.getX() - q.getX()) -
+		(q.getX() - p.getX()) * (r.getY() - q.getY());
+
+	if (val == 0) return 0;  // collinear
+
+	return (val > 0) ? 1 : 2; // clock or counterclock wise
+}
+bool doIntersect(Point p1, Point q1, Point p2, Point q2)
+{
+	// Find the four orientations needed for general and
+	// special cases
+	int o1 = orientation(p1, q1, p2);
+	int o2 = orientation(p1, q1, q2);
+	int o3 = orientation(p2, q2, p1);
+	int o4 = orientation(p2, q2, q1);
+
+	// General case
+	if (o1 != o2 && o3 != o4)
+		return true;
+
+	// Special Cases
+	// p1, q1 and p2 are collinear and p2 lies on segment p1q1
+	if (o1 == 0 && onSegment(p1, p2, q1)) return true;
+
+	// p1, q1 and q2 are collinear and q2 lies on segment p1q1
+	if (o2 == 0 && onSegment(p1, q2, q1)) return true;
+
+	// p2, q2 and p1 are collinear and p1 lies on segment p2q2
+	if (o3 == 0 && onSegment(p2, p1, q2)) return true;
+
+	// p2, q2 and q1 are collinear and q1 lies on segment p2q2
+	if (o4 == 0 && onSegment(p2, q1, q2)) return true;
+
+	return false; // Doesn't fall in any of the above cases
+}
+
 class Figure
 {
 public:
@@ -52,13 +98,13 @@ float& operator*(Point a, Point b) {
 	float c = a.getX() * b.getX() - a.getY() * b.getY();
 	return c;
 }
-
 // Line ax + by = c
 class Line {
 protected:
 	Point a, b;
 public:
 	float A, B, C;
+	Line(){}
 	Line(Point aa, Point bb):a(aa), b(bb) {
 		A = a.getY() - b.getY();
 		B = b.getX() - a.getX();
@@ -131,7 +177,7 @@ public:
 	Elipse(float a, float b);
 	virtual void Input(istream& inDevice);
 	virtual float Area();
-	virtual bool Check_through();
+	virtual bool Check_through(Line line);
 };
 
 Elipse::Elipse(float a = 0, float b = 0)
@@ -152,9 +198,9 @@ float Elipse::Area()
 	return 3.14 * Ra * Rb;
 }
 
-bool Elipse::Check_through()
+bool Elipse::Check_through(Line line)
 {
-	return (abs(this->Center.getY()) - this->Rb <= 0);
+	
 }
 
 // Triangle
@@ -169,7 +215,7 @@ public:
 	void setTriangle(Point p1, Point p2, Point p3);
 	virtual float Area();
 	virtual void Input(istream& inDevice);
-	virtual bool Check_through();
+	virtual bool Check_through(Line line);
 };
 
 Triangle::Triangle(Point p1, Point p2, Point p3)
@@ -212,9 +258,15 @@ void Triangle::Input(istream& inDevice)
 	t.setTriangle(p1, p2, p3);
 }
 
-bool Triangle::Check_through()
+bool Triangle::Check_through(Line line)
 {
-	return (p1.getY() <= 0 || p2.getY() <= 0 || p3.getY() <= 0);
+	bool AB = doIntersect(line.getPointS(), line.getPointE(), p1, p2);
+	bool AC = doIntersect(line.getPointS(), line.getPointE(), p1, p3);
+	bool BC = doIntersect(line.getPointS(), line.getPointE(), p2, p3);
+	if (AB || AC || BC) {
+		return true;
+	}
+	return false;
 }
 
 
@@ -230,7 +282,7 @@ public:
 	void setRectangle(Point rUpper, Point lLower);
 	virtual float Area();
 	virtual void Input(istream& inDevice);
-	virtual bool Check_through();
+	virtual bool Check_through(Line line);
 };
 
 void Rectangle::setRectangle(Point rUpper, Point lLower) {
@@ -261,24 +313,36 @@ void Rectangle::Input(istream& inDevice)
 	LLower.Input(cin);
 }
 
-bool Rectangle::Check_through()
-{
-	return LLower.getY() <= 0;
+bool Rectangle::Check_through(Line line)
+{	
+	Point p1(LLower.getX(), LLower.getY() + height);
+	Point p2 = LLower;
+	Point p3(RUpper.getX(), RUpper.getY() - height);
+	Point p4 = RUpper;
+	bool left = doIntersect(line.getPointS(), line.getPointE(), p1, p2);
+	bool right = doIntersect(line.getPointS(), line.getPointE(), p3, p4);
+	bool top = doIntersect(line.getPointS(), line.getPointE(), p1, p4);
+	bool bottom = doIntersect(line.getPointS(), line.getPointE(), p2, p3);
+	if (left || right || top || bottom) {
+		return true;
+	}
+	return false;
 }
 
-float CountHThrough(vector<Elipse> E, vector<Rectangle> R, vector<Triangle> T) {
+float CountHThrough(vector<Elipse> E, vector<Rectangle> R, vector<Triangle> T , Line line) {
 	int count = 0;
 	for (auto& n : E)
-		count += n.Check_through();
+		count += n.Check_through(line);
 	for (auto& n : R)
-		count += n.Check_through();
-	for (auto& n : E)
-		count += n.Check_through();
+		count += n.Check_through(line);
+	for (auto& n : T)
+		count += n.Check_through(line);
 	return count;
 }
 
 void main()
-{
+{	
+	Line l;
 	vector<Elipse> E;
 	vector<Rectangle> R;
 	vector<Triangle> T;
@@ -313,7 +377,8 @@ void main()
 
 		}
 	}
-	cout << "Hoanh do di qua " << CountHThrough(E, R, T) << " diem \n";
+
+	cout << "Hoanh do di qua " << CountHThrough(E, R, T, l) << " diem \n";
 	system("pause");
 	return;
 }
